@@ -9,4 +9,23 @@ describe("Cadence", () => {
             expect(cadence.state).toBe(CadenceState.STOPPED);
         });
     });
+
+    describe("start", () => {
+        it("transitions from stopped to running", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+
+            expect(cadence.state).toBe(CadenceState.RUNNING);
+        });
+
+        it("is idempotent when already running", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.start();
+
+            expect(cadence.state).toBe(CadenceState.RUNNING);
+        });
+    });
 });

@@ -6,4 +6,12 @@ export class Cadence {
     public get state(): CadenceState {
         return this.#state;
     }
+
+    public start(): void {
+        const state = this.#state;
+
+        if (state !== CadenceState.RUNNING) {
+            this.#state = CadenceState.RUNNING;
+        }
+    }
 }
