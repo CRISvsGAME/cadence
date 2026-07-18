@@ -14,4 +14,12 @@ export class Cadence {
             this.#state = CadenceState.RUNNING;
         }
     }
+
+    public pause(): void {
+        const state = this.#state;
+
+        if (state === CadenceState.RUNNING) {
+            this.#state = CadenceState.PAUSED;
+        }
+    }
 }
