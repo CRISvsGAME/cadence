@@ -10,6 +10,35 @@ describe("Cadence", () => {
         });
     });
 
+    describe("stop", () => {
+        it("transitions from running to stopped", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.stop();
+
+            expect(cadence.state).toBe(CadenceState.STOPPED);
+        });
+
+        it("transitions from paused to stopped", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.pause();
+            cadence.stop();
+
+            expect(cadence.state).toBe(CadenceState.STOPPED);
+        });
+
+        it("is idempotent when already stopped", () => {
+            const cadence = new Cadence();
+
+            cadence.stop();
+
+            expect(cadence.state).toBe(CadenceState.STOPPED);
+        });
+    });
+
     describe("start", () => {
         it("transitions from stopped to running", () => {
             const cadence = new Cadence();
