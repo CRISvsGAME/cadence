@@ -18,16 +18,24 @@ export class Cadence {
     public start(): void {
         const state = this.#state;
 
+        if (state === CadenceState.DESTROYED) {
+            throw new Error("Cadence: Cannot start a destroyed instance.");
+        }
+
         if (state !== CadenceState.RUNNING) {
             this.#state = CadenceState.RUNNING;
         }
     }
 
     public pause(): void {
-        const state = this.#state;
-
-        if (state === CadenceState.RUNNING) {
+        if (this.#state === CadenceState.RUNNING) {
             this.#state = CadenceState.PAUSED;
+        }
+    }
+
+    public destroy(): void {
+        if (this.#state !== CadenceState.DESTROYED) {
+            this.#state = CadenceState.DESTROYED;
         }
     }
 }

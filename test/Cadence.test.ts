@@ -34,6 +34,7 @@ describe("Cadence", () => {
             const cadence = new Cadence();
 
             cadence.stop();
+            cadence.stop();
 
             expect(cadence.state).toBe(CadenceState.STOPPED);
         });
@@ -94,6 +95,53 @@ describe("Cadence", () => {
             cadence.pause();
 
             expect(cadence.state).toBe(CadenceState.PAUSED);
+        });
+    });
+
+    describe("destroy", () => {
+        it("transitions from stopped to destroyed", () => {
+            const cadence = new Cadence();
+
+            cadence.destroy();
+
+            expect(cadence.state).toBe(CadenceState.DESTROYED);
+        });
+
+        it("transitions from running to destroyed", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.destroy();
+
+            expect(cadence.state).toBe(CadenceState.DESTROYED);
+        });
+
+        it("transitions from paused to destroyed", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.pause();
+            cadence.destroy();
+
+            expect(cadence.state).toBe(CadenceState.DESTROYED);
+        });
+
+        it("is idempotent when already destroyed", () => {
+            const cadence = new Cadence();
+
+            cadence.destroy();
+            cadence.destroy();
+
+            expect(cadence.state).toBe(CadenceState.DESTROYED);
+        });
+
+        it("throws when starting a destroyed instance", () => {
+            const cadence = new Cadence();
+
+            cadence.destroy();
+
+            expect(() => cadence.start()).toThrow();
+            expect(cadence.state).toBe(CadenceState.DESTROYED);
         });
     });
 });
