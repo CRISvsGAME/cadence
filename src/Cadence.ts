@@ -1,7 +1,9 @@
 import { CadenceState } from "./CadenceState.js";
+import type { CadenceFrameCallback } from "./CadenceFrame.js";
 
 export class Cadence {
     #state: CadenceState = CadenceState.STOPPED;
+    #subscribers: Set<CadenceFrameCallback> = new Set();
 
     public get state(): CadenceState {
         return this.#state;
@@ -34,8 +36,27 @@ export class Cadence {
     }
 
     public destroy(): void {
-        if (this.#state !== CadenceState.DESTROYED) {
-            this.#state = CadenceState.DESTROYED;
+        if (this.#state === CadenceState.DESTROYED) {
+            return;
         }
+
+        this.#state = CadenceState.DESTROYED;
+        this.#subscribers.clear();
+    }
+
+    public subscribe(callback: CadenceFrameCallback): void {
+        if (this.#state === CadenceState.DESTROYED) {
+            throw new Error("Cadence: Cannot subscribe to a destroyed instance.");
+        }
+
+        this.#subscribers.add(callback);
+    }
+
+    public unsubscribe(callback: CadenceFrameCallback): void {
+        this.#subscribers.delete(callback);
+    }
+
+    public subscriberCount(): number {
+        return this.#subscribers.size;
     }
 }

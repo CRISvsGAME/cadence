@@ -144,4 +144,78 @@ describe("Cadence", () => {
             expect(cadence.state).toBe(CadenceState.DESTROYED);
         });
     });
+
+    describe("subscribe", () => {
+        it("registers a subscriber callback", () => {
+            const cadence = new Cadence();
+            const callback = (): void => {};
+
+            cadence.subscribe(callback);
+
+            expect(cadence.subscriberCount()).toBe(1);
+        });
+
+        it("does not register the same subscriber multiple times", () => {
+            const cadence = new Cadence();
+            const callback = (): void => {};
+
+            cadence.subscribe(callback);
+            cadence.subscribe(callback);
+
+            expect(cadence.subscriberCount()).toBe(1);
+        });
+
+        it("registers multiple different subscribers", () => {
+            const cadence = new Cadence();
+            const callback1 = (): void => {};
+            const callback2 = (): void => {};
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+
+            expect(cadence.subscriberCount()).toBe(2);
+        });
+
+        it("throws when subscribing to a destroyed instance", () => {
+            const cadence = new Cadence();
+            const callback = (): void => {};
+
+            cadence.destroy();
+
+            expect(() => cadence.subscribe(callback)).toThrow();
+        });
+    });
+
+    describe("unsubscribe", () => {
+        it("removes a subscriber callback", () => {
+            const cadence = new Cadence();
+            const callback = (): void => {};
+
+            cadence.subscribe(callback);
+            cadence.unsubscribe(callback);
+
+            expect(cadence.subscriberCount()).toBe(0);
+        });
+
+        it("does nothing for an unknown subscriber", () => {
+            const cadence = new Cadence();
+            const callback = (): void => {};
+
+            cadence.unsubscribe(callback);
+
+            expect(cadence.subscriberCount()).toBe(0);
+        });
+
+        it("clears all subscribers when destroyed", () => {
+            const cadence = new Cadence();
+            const callback1 = (): void => {};
+            const callback2 = (): void => {};
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.destroy();
+
+            expect(cadence.subscriberCount()).toBe(0);
+        });
+    });
 });
