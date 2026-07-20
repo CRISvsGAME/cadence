@@ -5,4 +5,4 @@ export type CadenceFrame = {
     readonly frame: number;
 };
 
-export type CadenceFrameCallback = (frame: CadenceFrame) => void;
+export type CadenceFrameCallback = (cadenceFrame: CadenceFrame) => void;
