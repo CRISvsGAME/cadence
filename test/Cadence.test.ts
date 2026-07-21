@@ -1,7 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Cadence, CadenceState } from "../src/index.ts";
+import { AnimationFrameMock } from "./utils/AnimationFrameMock.ts";
 
-describe("Cadence", () => {
+const animationFrameMock = new AnimationFrameMock();
+
+beforeAll(() => {
+    animationFrameMock.install();
+});
+
+beforeEach(() => {
+    animationFrameMock.reset();
+});
+
+afterAll(() => {
+    animationFrameMock.uninstall();
+});
+
+describe("state", () => {
     describe("constructor", () => {
         it("starts in the stopped state", () => {
             const cadence = new Cadence();
