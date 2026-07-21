@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Cadence, CadenceState } from "../src/index.ts";
 import { AnimationFrameMock } from "./utils/AnimationFrameMock.ts";
+import type { CadenceFrame } from "../src/CadenceFrame.ts";
 
 const animationFrameMock = new AnimationFrameMock();
 
@@ -10,6 +11,10 @@ beforeAll(() => {
 
 beforeEach(() => {
     animationFrameMock.reset();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
 });
 
 afterAll(() => {
@@ -231,6 +236,120 @@ describe("state", () => {
             cadence.destroy();
 
             expect(cadence.subscriberCount()).toBe(0);
+        });
+    });
+});
+
+describe("animation frame", () => {
+    describe("scheduling", () => {
+        it("schedules the next animation frame request after each dispatch", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+
+            expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(1);
+
+            animationFrameMock.dispatch(100);
+
+            expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+            expect(animationFrameMock.pendingRequestCount()).toBe(1);
+
+            animationFrameMock.dispatch(200);
+
+            expect(requestAnimationFrame).toHaveBeenCalledTimes(3);
+            expect(animationFrameMock.pendingRequestCount()).toBe(1);
+        });
+
+        it("allows a subscriber to cancel the next animation frame request", () => {
+            const cadence = new Cadence();
+
+            const callback = vi.fn((): void => {
+                cadence.pause();
+            });
+
+            cadence.subscribe(callback);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+            expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(0);
+            expect(cadence.state).toBe(CadenceState.PAUSED);
+            expect(callback).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("dispatching", () => {
+        it("dispatches cadence frame objects to subscribers", () => {
+            const cadence = new Cadence();
+            const frames: CadenceFrame[] = [];
+
+            const callback = (cadenceFrame: CadenceFrame): void => {
+                frames.push(cadenceFrame);
+            };
+
+            cadence.subscribe(callback);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+            animationFrameMock.dispatch(200);
+            animationFrameMock.dispatch(300);
+
+            expect(frames).toEqual([
+                { timestamp: 100, delta: 0, elapsed: 0, frame: 0 },
+                { timestamp: 200, delta: 100, elapsed: 100, frame: 1 },
+                { timestamp: 300, delta: 100, elapsed: 200, frame: 2 },
+            ]);
+        });
+
+        it("dispatches the same cadence frame object to all subscribers", () => {
+            const cadence = new Cadence();
+            let frame1: CadenceFrame | undefined;
+            let frame2: CadenceFrame | undefined;
+
+            const callback1 = (cadenceFrame: CadenceFrame): void => {
+                frame1 = cadenceFrame;
+            };
+
+            const callback2 = (cadenceFrame: CadenceFrame): void => {
+                frame2 = cadenceFrame;
+            };
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(frame1).toBeDefined();
+            expect(frame2).toBeDefined();
+            expect(frame1).toBe(frame2);
+        });
+
+        it("continues to dispatch when a subscriber throws", () => {
+            const cadence = new Cadence();
+            const error = new Error("Subscriber Error");
+
+            const errorCallback = vi.fn((): void => {
+                throw error;
+            });
+
+            const successCallback = vi.fn();
+
+            const consoleError = vi.spyOn(console, "error").mockImplementation((): void => {});
+
+            cadence.subscribe(errorCallback);
+            cadence.subscribe(successCallback);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+            animationFrameMock.dispatch(200);
+
+            expect(errorCallback).toHaveBeenCalledTimes(2);
+            expect(successCallback).toHaveBeenCalledTimes(2);
+            expect(consoleError).toHaveBeenCalledTimes(2);
         });
     });
 });

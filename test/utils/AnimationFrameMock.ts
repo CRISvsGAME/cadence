@@ -1,6 +1,12 @@
 import { vi } from "vitest";
 
+type GlobalPropertyName = "requestAnimationFrame" | "cancelAnimationFrame";
+type GlobalPropertyDescriptor = PropertyDescriptor | undefined;
+
 export class AnimationFrameMock {
+    #requestAnimationFrameDescriptor: GlobalPropertyDescriptor = undefined;
+    #cancelAnimationFrameDescriptor: GlobalPropertyDescriptor = undefined;
+    #installed: boolean = false;
     #nextId: number = 1;
     #callbacks: Map<number, FrameRequestCallback> = new Map();
 
@@ -16,17 +22,59 @@ export class AnimationFrameMock {
         this.#callbacks.delete(id);
     };
 
+    #assertInstalled(): void {
+        if (!this.#installed) {
+            throw new Error("AnimationFrameMock is not installed.");
+        }
+    }
+
     #resetState(): void {
         this.#nextId = 1;
         this.#callbacks.clear();
     }
 
+    #restoreGlobalProperty(name: GlobalPropertyName, descriptor: GlobalPropertyDescriptor): void {
+        if (descriptor === undefined) {
+            Reflect.deleteProperty(globalThis, name);
+        } else {
+            Object.defineProperty(globalThis, name, descriptor);
+        }
+    }
+
     public install(): void {
-        vi.stubGlobal("requestAnimationFrame", vi.fn(this.#requestAnimationFrame));
-        vi.stubGlobal("cancelAnimationFrame", vi.fn(this.#cancelAnimationFrame));
+        if (this.#installed) {
+            throw new Error("AnimationFrameMock is already installed.");
+        }
+
+        const requestAnimationFrameDescriptor = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
+        const cancelAnimationFrameDescriptor = Object.getOwnPropertyDescriptor(globalThis, "cancelAnimationFrame");
+
+        try {
+            Object.defineProperty(globalThis, "requestAnimationFrame", {
+                value: vi.fn(this.#requestAnimationFrame),
+                writable: true,
+                configurable: true,
+            });
+
+            Object.defineProperty(globalThis, "cancelAnimationFrame", {
+                value: vi.fn(this.#cancelAnimationFrame),
+                writable: true,
+                configurable: true,
+            });
+        } catch (error) {
+            this.#restoreGlobalProperty("requestAnimationFrame", requestAnimationFrameDescriptor);
+            this.#restoreGlobalProperty("cancelAnimationFrame", cancelAnimationFrameDescriptor);
+
+            throw error;
+        }
+
+        this.#requestAnimationFrameDescriptor = requestAnimationFrameDescriptor;
+        this.#cancelAnimationFrameDescriptor = cancelAnimationFrameDescriptor;
+        this.#installed = true;
     }
 
     public reset(): void {
+        this.#assertInstalled();
         this.#resetState();
 
         vi.mocked(requestAnimationFrame).mockClear();
@@ -34,12 +82,22 @@ export class AnimationFrameMock {
     }
 
     public uninstall(): void {
-        this.#resetState();
+        if (!this.#installed) {
+            return;
+        }
 
-        vi.unstubAllGlobals();
+        this.#resetState();
+        this.#restoreGlobalProperty("requestAnimationFrame", this.#requestAnimationFrameDescriptor);
+        this.#restoreGlobalProperty("cancelAnimationFrame", this.#cancelAnimationFrameDescriptor);
+
+        this.#requestAnimationFrameDescriptor = undefined;
+        this.#cancelAnimationFrameDescriptor = undefined;
+        this.#installed = false;
     }
 
     public dispatch(timestamp: DOMHighResTimeStamp): void {
+        this.#assertInstalled();
+
         const callbacks = Array.from(this.#callbacks.values());
 
         this.#callbacks.clear();
@@ -50,6 +108,8 @@ export class AnimationFrameMock {
     }
 
     public pendingRequestCount(): number {
+        this.#assertInstalled();
+
         return this.#callbacks.size;
     }
 }
