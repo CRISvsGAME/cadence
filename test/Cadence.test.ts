@@ -241,6 +241,120 @@ describe("state", () => {
 });
 
 describe("animation frame", () => {
+    describe("stop", () => {
+        it("cancels the pending animation frame request when stopped", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.stop();
+
+            expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(0);
+        });
+
+        it("resets elapsed time and frame index when restarted after stopping", () => {
+            const cadence = new Cadence();
+            const frames: CadenceFrame[] = [];
+
+            const callback = (cadenceFrame: CadenceFrame): void => {
+                frames.push(cadenceFrame);
+            };
+
+            cadence.subscribe(callback);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+            animationFrameMock.dispatch(200);
+
+            cadence.stop();
+            cadence.start();
+
+            animationFrameMock.dispatch(1000);
+
+            expect(frames[2]).toEqual({
+                timestamp: 1000,
+                delta: 0,
+                elapsed: 0,
+                frame: 0,
+            });
+        });
+    });
+
+    describe("start", () => {
+        it("schedules an animation frame request when started", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+
+            expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(1);
+        });
+
+        it("does not schedule another animation frame request when already running", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.start();
+
+            expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(1);
+        });
+    });
+
+    describe("pause", () => {
+        it("cancels the pending animation frame request when paused", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.pause();
+
+            expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(0);
+        });
+
+        it("preserves elapsed time and frame index when restarted after pausing", () => {
+            const cadence = new Cadence();
+            const frames: CadenceFrame[] = [];
+
+            const callback = (cadenceFrame: CadenceFrame): void => {
+                frames.push(cadenceFrame);
+            };
+
+            cadence.subscribe(callback);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+            animationFrameMock.dispatch(200);
+
+            cadence.pause();
+            cadence.start();
+
+            animationFrameMock.dispatch(1000);
+
+            expect(frames[2]).toEqual({
+                timestamp: 1000,
+                delta: 0,
+                elapsed: 100,
+                frame: 2,
+            });
+        });
+    });
+
+    describe("destroy", () => {
+        it("cancels the pending animation frame request when destroyed", () => {
+            const cadence = new Cadence();
+
+            cadence.start();
+            cadence.destroy();
+
+            expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+            expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+            expect(animationFrameMock.pendingRequestCount()).toBe(0);
+        });
+    });
+
     describe("scheduling", () => {
         it("schedules the next animation frame request after each dispatch", () => {
             const cadence = new Cadence();
