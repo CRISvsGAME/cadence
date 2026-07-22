@@ -34,7 +34,13 @@ export class Cadence {
 
         this.#animationFrameId = requestAnimationFrame(this.#onAnimationFrame);
 
-        for (const subscriber of this.#subscribers) {
+        const subscribers = [...this.#subscribers];
+
+        for (const subscriber of subscribers) {
+            if (!this.#subscribers.has(subscriber)) {
+                continue;
+            }
+
             try {
                 subscriber(cadenceFrame);
             } catch (error) {

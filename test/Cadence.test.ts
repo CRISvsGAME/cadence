@@ -355,6 +355,108 @@ describe("animation frame", () => {
         });
     });
 
+    describe("subscribe", () => {
+        it("dispatches to subscribers on the next animation frame", () => {
+            const cadence = new Cadence();
+            let frame: CadenceFrame | undefined = undefined;
+
+            const callback = vi.fn((cadenceFrame: CadenceFrame): void => {
+                frame = cadenceFrame;
+            });
+
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            cadence.subscribe(callback);
+
+            expect(callback).toHaveBeenCalledTimes(0);
+            expect(frame).toBeUndefined();
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback).toHaveBeenCalledTimes(1);
+            expect(frame).toEqual({
+                timestamp: 200,
+                delta: 100,
+                elapsed: 100,
+                frame: 1,
+            });
+        });
+
+        it("does not dispatch to subscribers removed during the animation frame", () => {
+            const cadence = new Cadence();
+            const callback2 = vi.fn();
+
+            const callback1 = vi.fn((): void => {
+                cadence.unsubscribe(callback2);
+            });
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(0);
+        });
+
+        it("does not dispatch to subscribers added during the animation frame", () => {
+            const cadence = new Cadence();
+            const callback2 = vi.fn();
+
+            const callback1 = vi.fn((): void => {
+                cadence.subscribe(callback2);
+            });
+
+            cadence.subscribe(callback1);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(0);
+        });
+
+        it("dispatches to subscribers removed and re-added during the animation frame", () => {
+            const cadence = new Cadence();
+            const callback2 = vi.fn();
+
+            const callback1 = vi.fn((): void => {
+                cadence.unsubscribe(callback2);
+                cadence.subscribe(callback2);
+            });
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not dispatch multiple times to the same subscriber during the frame", () => {
+            const cadence = new Cadence();
+            const callback2 = vi.fn();
+
+            const callback1 = vi.fn((): void => {
+                cadence.subscribe(callback2);
+            });
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe("scheduling", () => {
         it("schedules the next animation frame request after each dispatch", () => {
             const cadence = new Cadence();
