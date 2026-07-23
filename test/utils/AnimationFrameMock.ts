@@ -98,11 +98,16 @@ export class AnimationFrameMock {
     public dispatch(timestamp: DOMHighResTimeStamp): void {
         this.#assertInstalled();
 
-        const callbacks = [...this.#callbacks.values()];
+        const callbackIds = [...this.#callbacks.keys()];
 
-        this.#callbacks.clear();
+        for (const callbackId of callbackIds) {
+            const callback = this.#callbacks.get(callbackId);
 
-        for (const callback of callbacks) {
+            if (callback === undefined) {
+                continue;
+            }
+
+            this.#callbacks.delete(callbackId);
             callback(timestamp);
         }
     }

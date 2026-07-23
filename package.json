@@ -36,7 +36,7 @@
     "scripts": {
         "build": "tsc && tsc --project tsconfig.dev.json",
         "dev": "tsc --watch & tsc --project tsconfig.dev.json --watch",
-        "test": "vitest run"
+        "test": "tsc --project tsconfig.test.json && vitest run"
     },
     "devDependencies": {
         "typescript": "^7.0.2",

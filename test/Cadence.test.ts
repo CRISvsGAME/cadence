@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Cadence, CadenceState } from "../src/index.ts";
+import type { CadenceFrame } from "../src/index.ts";
 import { AnimationFrameMock } from "./utils/AnimationFrameMock.ts";
-import type { CadenceFrame } from "../src/CadenceFrame.ts";
 
 const animationFrameMock = new AnimationFrameMock();
 
@@ -356,7 +356,7 @@ describe("animation frame", () => {
     });
 
     describe("subscribe", () => {
-        it("dispatches to subscribers on the next animation frame", () => {
+        it("dispatches to subscribers on subsequent animation frames", () => {
             const cadence = new Cadence();
             let frame: CadenceFrame | undefined = undefined;
 
@@ -382,6 +382,16 @@ describe("animation frame", () => {
                 elapsed: 100,
                 frame: 1,
             });
+
+            animationFrameMock.dispatch(300);
+
+            expect(callback).toHaveBeenCalledTimes(2);
+            expect(frame).toEqual({
+                timestamp: 300,
+                delta: 100,
+                elapsed: 200,
+                frame: 2,
+            });
         });
 
         it("does not dispatch to subscribers added during the animation frame", () => {
@@ -399,6 +409,11 @@ describe("animation frame", () => {
 
             expect(callback1).toHaveBeenCalledTimes(1);
             expect(callback2).toHaveBeenCalledTimes(0);
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback1).toHaveBeenCalledTimes(2);
+            expect(callback2).toHaveBeenCalledTimes(1);
         });
 
         it("dispatches to subscribers removed and re-added during the animation frame", () => {
@@ -418,14 +433,20 @@ describe("animation frame", () => {
 
             expect(callback1).toHaveBeenCalledTimes(1);
             expect(callback2).toHaveBeenCalledTimes(1);
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback1).toHaveBeenCalledTimes(2);
+            expect(callback2).toHaveBeenCalledTimes(2);
         });
 
         it("does not dispatch multiple times to the same subscriber during the frame", () => {
             const cadence = new Cadence();
-            const callback2 = vi.fn();
+            const callback1 = vi.fn();
 
-            const callback1 = vi.fn((): void => {
-                cadence.subscribe(callback2);
+            const callback2 = vi.fn((): void => {
+                cadence.unsubscribe(callback1);
+                cadence.subscribe(callback1);
             });
 
             cadence.subscribe(callback1);
@@ -436,6 +457,11 @@ describe("animation frame", () => {
 
             expect(callback1).toHaveBeenCalledTimes(1);
             expect(callback2).toHaveBeenCalledTimes(1);
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback1).toHaveBeenCalledTimes(2);
+            expect(callback2).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -452,6 +478,10 @@ describe("animation frame", () => {
             cadence.unsubscribe(callback);
 
             animationFrameMock.dispatch(200);
+
+            expect(callback).toHaveBeenCalledTimes(1);
+
+            animationFrameMock.dispatch(300);
 
             expect(callback).toHaveBeenCalledTimes(1);
         });
@@ -472,6 +502,11 @@ describe("animation frame", () => {
 
             expect(callback1).toHaveBeenCalledTimes(1);
             expect(callback2).toHaveBeenCalledTimes(0);
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback1).toHaveBeenCalledTimes(2);
+            expect(callback2).toHaveBeenCalledTimes(0);
         });
 
         it("dispatches to subscribers removed after their turn", () => {
@@ -490,6 +525,11 @@ describe("animation frame", () => {
 
             expect(callback1).toHaveBeenCalledTimes(1);
             expect(callback2).toHaveBeenCalledTimes(1);
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(2);
         });
     });
 
