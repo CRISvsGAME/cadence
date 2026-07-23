@@ -384,24 +384,6 @@ describe("animation frame", () => {
             });
         });
 
-        it("does not dispatch to subscribers removed during the animation frame", () => {
-            const cadence = new Cadence();
-            const callback2 = vi.fn();
-
-            const callback1 = vi.fn((): void => {
-                cadence.unsubscribe(callback2);
-            });
-
-            cadence.subscribe(callback1);
-            cadence.subscribe(callback2);
-            cadence.start();
-
-            animationFrameMock.dispatch(100);
-
-            expect(callback1).toHaveBeenCalledTimes(1);
-            expect(callback2).toHaveBeenCalledTimes(0);
-        });
-
         it("does not dispatch to subscribers added during the animation frame", () => {
             const cadence = new Cadence();
             const callback2 = vi.fn();
@@ -444,6 +426,60 @@ describe("animation frame", () => {
 
             const callback1 = vi.fn((): void => {
                 cadence.subscribe(callback2);
+            });
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("unsubscribe", () => {
+        it("does not dispatch to subscribers on subsequent animation frames", () => {
+            const cadence = new Cadence();
+            const callback = vi.fn();
+
+            cadence.subscribe(callback);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            cadence.unsubscribe(callback);
+
+            animationFrameMock.dispatch(200);
+
+            expect(callback).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not dispatch to subscribers removed before their turn", () => {
+            const cadence = new Cadence();
+            const callback2 = vi.fn();
+
+            const callback1 = vi.fn((): void => {
+                cadence.unsubscribe(callback2);
+            });
+
+            cadence.subscribe(callback1);
+            cadence.subscribe(callback2);
+            cadence.start();
+
+            animationFrameMock.dispatch(100);
+
+            expect(callback1).toHaveBeenCalledTimes(1);
+            expect(callback2).toHaveBeenCalledTimes(0);
+        });
+
+        it("dispatches to subscribers removed after their turn", () => {
+            const cadence = new Cadence();
+            const callback1 = vi.fn();
+
+            const callback2 = vi.fn((): void => {
+                cadence.unsubscribe(callback1);
             });
 
             cadence.subscribe(callback1);
