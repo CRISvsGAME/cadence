@@ -1,6 +1,6 @@
 {
     "name": "@crisvsgame/cadence",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "A lightweight TypeScript library for shared requestAnimationFrame timing and lifecycle coordination.",
     "keywords": [
         "requestanimationframe",
